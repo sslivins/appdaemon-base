@@ -1,0 +1,16 @@
+services:
+  appdaemon:
+    build: .
+    image: appdaemon-base:4.4.2
+    container_name: appdaemon
+    ports:
+      - "5050:5050"
+    environment:
+      HA_URL: "http://homeassistant.mi:8123"
+      DASH_URL: "http://appdaemon.mi:5050"
+      TZ: "America/Los_Angeles"
+    volumes:
+      # The runtime config + apps live here on the host. Each app (and the
+      # shared home_lib) is its own git clone under conf/apps/<name>/.
+      - /home/appdaemon/docker/appdaemon/conf:/conf
+    restart: always
