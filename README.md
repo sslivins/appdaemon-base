@@ -42,6 +42,43 @@ cd appdaemon-base
 docker compose up -d --build
 ```
 
+## Installing an app (`install_app.py`)
+
+Apps are self-contained, but some need to extend the **shared** top-level
+`appdaemon.yaml` - most commonly to register a named log under `logs:`.
+`install_app.py` applies those extensions idempotently and comment-safely so the
+shared file never drifts and apps don't have to hand-edit it.
+
+An app opts in by shipping an `install/` directory at its repo root:
+
+- `install/<section>.yaml` - a YAML block merged **under** the top-level
+  `appdaemon.yaml` key `<section>:`. The filename selects the section, so
+  `install/logs.yaml` extends `logs:`. Author it 2-space indented (exactly as it
+  should appear beneath that key). If the section doesn't exist it is created.
+- `install/hook.py` - optional; run as `python hook.py <conf> <app_dir>` for
+  anything that isn't a YAML merge (pip installs, generating files, etc.).
+
+Each merged block is wrapped in
+`# >>> <name>:<section> (install_app.py) >>>` / `# <<< <name>:<section> <<<`
+markers, so re-running just replaces what's between them - fully idempotent.
+`appdaemon.yaml` is validated and written atomically.
+
+```sh
+# clone/pull the app, wire its install/ fragments, restart the container
+python install_app.py unifi_screen_watchdog \
+    --repo https://github.com/sslivins/appdaemon-unifi-screen-watchdog \
+    --restart
+
+# re-apply after editing an install/ fragment (idempotent)
+python install_app.py unifi_screen_watchdog
+
+# uninstall: remove its config blocks + the app clone
+python install_app.py unifi_screen_watchdog --remove
+```
+
+`--conf` defaults to `../appdaemon/conf` relative to this repo (override with
+`--conf PATH` or `APPDAEMON_CONF`). `--branch` selects a branch when cloning.
+
 ## Phase 2 (later)
 
 Once `home_lib` stabilises, bake it into this image instead of cloning it into
